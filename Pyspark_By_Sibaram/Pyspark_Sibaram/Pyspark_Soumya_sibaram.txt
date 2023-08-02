@@ -1,0 +1,1788 @@
+
+
+#28/01/2022
+
+#Section 16: DataFrame Fundamentals:
+****************************************
+
+What is a dataframe ??
+----------------------
+
+-DataFrame is a dataset organised into into named columns/rows.
+-Conceptually equivalent to RDBMS table/ Python Data frame  + Richer optimizations.
+
+DataFrame Sources:
+------------------
+-Structured data files(CSV , JSON ,AVRO , PARQUET etc)
+-Hive
+-Casandra
+-Python DataFrame
+-RDBMS Databases
+-RDDs
+
+DataFrame Features:
+-------------------
+-1)Distributed
+-2)Lazy Evaluation
+-3)Immutability
+-4)Used across Spark Ecosystem
+-5)polygot
+-6)Work on huge collection of dataset
+-7)Support both Structured and semi-Structured data
+
+-1)Distributed:
+---------------
+-Like RDD , dataframe is also distributed.
+-Supports HA and FT.
+
+>>> lst= [('Soumya',30),('Ranjan',40),('nayak',50)]
+>>> df=spark.createDataFrame(data=lst,schema=['Name','Age'])
+>>> df.show()
++------+---+
+|  Name|Age|
++------+---+
+|Soumya| 30|
+|Ranjan| 40|
+| nayak| 50|
++------+---+
+ 
+>>> df.rdd.getNumPartitions()
+4
+>>> df.rdd.glom().collect()
+[[], [Row(Name='Soumya', Age=30)], [Row(Name='Ranjan', Age=40)], [Row(Name='nayak', Age=50)]]
+
+Note:
+------
+glom() method used to get data from different partitions.
+
+-2) Lazy Evaluation:
+--------------------
+Each Transformation is a lazy operation . 
+Evaluation is not started until an action is triggered.
+
+-3) Immutability:
+-----------------
+DataFrame is considered to be immutable storage.
+
+-4) Used across the Spark Ecosystem:
+------------------------------------
+
+DataFrame is a unified API across all libraries in spark 
+Spark SQL
+Spark Streaming 
+Mlib
+Graphx
+
+-5) Polygot:
+------------
+Supports multiple languages - Scala , python , Java , R 
+
+-6)Works on huge collection of dataset , feasible to work with a wide file.
+-7)Support both Structured and semi-Structured data.
+
+#Hands-On:
+------------
+common functions on Data Frames
+-printSchema: To print the column names and data types of dataframe
+-show : To preview data(default 20 records)
+-describe : To understand the characteristics of data
+-count : To get the number of records
+-collect : To convert dataframe into array
+-type
+-dtypes  
+
+Dataframe organization of data:
+-------------------------------
+
+A dataframe has 3 levels to organize and process its data -
+    Schema , Storage , API 
+    
+Schema: 
+-------
+DataFrame is implemented as dataset of rows .
+Each column is named and typed .
+
+Storage:
+--------
+Storage is distributed and data is stored in partitions.
+Storage in Memory and Disc , or off-heap or any of these 3 combinations .
+
+API:
+----
+used to process the data.
+
+#StorageLevel:
+****************
+
+-Data can be stored either in Disc or Memory or off-heap or any of these 3 combinations .
+-Off-heap memory is a segment of memory lies outside the JVM , but is used by JVM for certain use-cases .
+-Off-heap memory can be used by spark explicitly as well to store serialized dataframes and RDDs.
+-Data can be stored in serialized or deserialized . 
+-Serialization is a way to convert a java object in memory to series of bits . and the deserialization is the process of bringing those bits into memory as an object.
+-Whenever we are talking about deserialized RDD/DF , we are always referring to RDD/DFs in memory.
+-Use the replicated storagelevels if you want fast fault recovery.
+
+ 
+The following code block has the class definition of a StorageLevel −
+class pyspark.StorageLevel(useDisk, useMemory, useOffHeap, deserialized, replication = 1)
+
+    DISK_ONLY = StorageLevel(True, False, False, False, 1)
+    DISK_ONLY_2 = StorageLevel(True, False, False, False, 2)
+    MEMORY_AND_DISK = StorageLevel(True, True, False, False, 1)
+    MEMORY_AND_DISK_2 = StorageLevel(True, True, False, False, 2)
+    MEMORY_AND_DISK_SER = StorageLevel(True, True, False, False, 1)
+    MEMORY_AND_DISK_SER_2 = StorageLevel(True, True, False, False, 2)
+    MEMORY_ONLY = StorageLevel(False, True, False, False, 1)
+    MEMORY_ONLY_2 = StorageLevel(False, True, False, False, 2)
+    MEMORY_ONLY_SER = StorageLevel(False, True, False, False, 1)
+    MEMORY_ONLY_SER_2 = StorageLevel(False, True, False, False, 2)
+    OFF_HEAP = StorageLevel(True, True, True, False, 1)
+
+>>> from pyspark import StorageLevel
+>>> df=spark.range(10)
+>>> df.rdd.getStorageLevel()
+StorageLevel(False, False, False, False, 1)
+>>> df.rdd.persist(StorageLevel.MEMORY_AND_DISK_2).getStorageLevel()
+StorageLevel(True, True, False, False, 2)
+>>> df1=spark.range(10)
+>>> df1.rdd.persist().getStorageLevel()
+StorageLevel(False, True, False, False, 1)
+
+
+***********************************************
+#Section 17: SparkSession Functionalities:
+***********************************************
+
+-> From Spark 2.0 onwards ,SparkSession is the new entrypoint to work with RDD, DataFrame and all other functionalities.
+-> Prior to 2.0 , SparkContext used to be an entry point.
+-> Almost all APIs available in SparkContext, SQLContext, HiveContext are now available in SparkSession.
+    SparkContext: Entry point to work with RDD , Accumulators , and broadcast variables(<Spark 2.0)
+    SQLContext: Used for initializing the functionalities of Spark SQL(<Spark 2.0)
+    HiveContext : Super set of SQLContext
+->By default Spark Shell provides "spark" object which is an instance of SparkSession class.
+
+-> To get SparkContext object from SparkSession
+    spark.sparkContext
+    
+#"SparkSession:Create"
+------------------------
+
+from pyspark.sql import SparkSession
+spark= SparkSession\
+    .builder\
+    .master('local')\        # .master('yarn')
+    .appName('Basic Test')\
+    .getOrCreate()
+
+master can be yarn, mesos, kubernetes, local(x) , x>0
+
+How to run:
+-----------
+1. Organize the folders and create a python file under bin folder .
+2. Write the above codes in .py file.
+3. Execute the file using spark-submit command .
+
+
+spark-submit \Dev1\example1\src\main\python\bin\basic.py
+
+#"SparkSession:spark-submit"
+-------------------------------
+spark-submit is a utility to run pyspark application job by specifying options and configurations.
+
+spark-submit\
+--master <master-url>\
+--deploy-mode <deploy-mode>\
+--conf <key>=<value>\
+--driver-memory <value>g\
+--executor-memory <value>g\
+--executor-cores <number of cores>\
+--jars <comma separted depedencies>\
+--packages <packagename>\
+--py-files <.py files>... <.zip files>\
+<application> <application-args>
+
+
+--master:
+
+    Cluster manager(yarn,mesos,Kubernetes,local,local(k))
+    local-use local to run locally with one worker node
+    local(k)- Specify k with number of cores you have locally, this runs application with k worker threads
+    
+--deploy-mode:
+
+    Either Cluster or client
+    
+    "Cluster":Driver runs on one of the worker nodes and you can see the code as a driver on the Spark UI of your application. We cant see the logs on the terminal. Logs available only in the UI or the yarn CLI.
+    yarn logs -applicationId <application_id
+    mainly used for production jobs
+    
+    "Client":Driver runs locally where we submit the application.
+    see the logs on the termincal
+    mainly used for interactive or debugging purpose
+    
+--conf: 
+    We can provide run time configurations, shuffle paramters ,application configurations using --conf
+    ex: --conf spark.sql.shuffle.partitions = 300
+    this configurs the number of partitions that are used when when shuffling data for joins or aggregations.
+    
+--driver-memory:
+    Amount of memory to allocate for a driver.(default 1024m)
+--executor-memory:
+    Amount of memory to use for the executor process.
+--executor-cores:
+    Number of CPU cores to use for the executor process.
+--jars:
+    Dependency .jar files
+    ex: --jars lib/ojdbc7.jar , file2.jar , file3.jar
+--packages:
+    pass the depedency packages
+    Ex:--packages org.apache.spark:spark-avro_2.11:2.4.4
+--py-files:
+    Use --py-files to add .py and .zip files. File specified with --py-files are uplloaded to the cluster before it run the application.
+    Ex: --py-files file1.py, file2.py , file3.zip
+
+    
+spark-submit\
+--master "yarn"\
+--deploy-mode "client"\
+--conf spark.sql.shuffle.partitions = 300
+--driver-memory 1024m\
+--executor-memory 1024m\
+--executor-cores 2\
+--num-executors 2\
+--jars lib/ojdbc7.jar , file2.jar , file3.jar\
+--packages org.apache.spark:spark-avro_2.11:2.4.4\
+--py-files file1.py, file2.py , file3.zip\
+\Dev1\example1\src\main\python\bin\basic.py arg1 arg2 arg3
+
+#Spark Session : Commonly Used Functions:
+---------------------------------------------
+-1)version:
+    returns spark version where your spark application is running.
+-2)range()
+    This creates a DataFrame with a range of values.
+-3)createDataFrame()
+    This creates a dataframe from a collection(list,dict) , RDD or python Pandas
+-4)sql()
+    Returns a dataframe representing the result of a given query
+-5)table()
+    returns the specified table as dataframe.
+-6)sparkContext
+    returns SparkContext
+-7)conf()
+    runtime configuration(get and set)
+-8)read()
+    used to load a dataframe from external storage systems.
+-9)udf()
+    dedicated section for this
+-10)newSession()
+-11)stop()
+    Stop the underlying SparkContext
+-12)catalog() 
+
+
+#1)version:
+------------
+Attribute returns spark version where application is running.
+
+>>> spark.version
+'3.2.0'
+>>> sc.version
+'3.2.0'
+>>> spark.sparkContext.version
+'3.2.0'
+
+#2)range():
+------------
+Creates a dataframe with range of values.
+range(start, end=None, step=1, numPartitions=None)
+
+>>> df=spark.range(1,10,2)
+>>> df.show()
++---+
+| id|
++---+
+|  1|
+|  3|
+|  5|
+|  7|
+|  9|
++---+
+
+>>> df=spark.range(5)
+>>> df.show()
++---+
+| id|
++---+
+|  0|
+|  1|
+|  2|
+|  3|
+|  4|
++---+
+>>> df.rdd.getNumPartitions()
+4
+>>> df=spark.range(5,numPartitions=5)
+>>> df.rdd.getNumPartitions()
+5
+
+#3)createDataFrame():
+-----------------------
+
+This creates a dataframe from a collection(list,dict) , RDD or Python pandas.
+
+createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)
+
+a) Using Python List:
+----------------------
+ Without Schema definition
+ --------------------------
+>>> lst=[('Robert',35),('Ranjan',36)]
+>>> lst_df = spark.createDataFrame(data=lst)
+>>> lst_df.show()
++------+---+
+|    _1| _2|
++------+---+
+|Robert| 35|
+|Ranjan| 36|
++------+---+
+
+>>> lst_df.printSchema()
+root
+ |-- _1: string (nullable = true)
+ |-- _2: long (nullable = true)
+
+   With Schema definition , but no datatype
+   ------------------------------------------
+
+>>> lst_df1 = spark.createDataFrame(data=lst,schema=('Name','Age'))
+>>> lst_df1.show()
++------+---+
+|  Name|Age|
++------+---+
+|Robert| 35|
+|Ranjan| 36|
++------+---+
+
+>>> lst_df1.printSchema()
+root
+ |-- Name: string (nullable = true)
+ |-- Age: long (nullable = true)
+ 
+ 
+    With Schema definition + datatype
+   -----------------------------------
+>>> lst_df2=spark.createDataFrame(data=lst,schema=('Name String ,Age Int'))
+>>> lst_df2.show()
++------+---+
+|  Name|Age|
++------+---+
+|Robert| 35|
+|Ranjan| 36|
++------+---+
+>>> lst_df2.printSchema()
+root
+ |-- Name: string (nullable = true)
+ |-- Age: integer (nullable = true)
+
+
+b) Using Python Dict:
+----------------------
+>>> dict=[{'name':'Robert','Age':25},{'name':'Ranjan','Age':26}]
+>>> dict_df1=spark.createDataFrame(dict)
+>>> dict_df1.show()
++---+------+
+|Age|  name|
++---+------+
+| 25|Robert|
+| 26|Ranjan|
++---+------+
+
+>>> dict_df1.printSchema()
+root
+ |-- Age: long (nullable = true)
+ |-- name: string (nullable = true)
+
+c) Using RDD:
+-------------
+
+>>> rdd=sc.parallelize(lst)
+>>> rdd_df1=spark.createDataFrame(data=rdd,schema=('Name String,Age Int'))
+>>> rdd_df1.show()
++------+---+
+|  Name|Age|
++------+---+
+|Robert| 35|
+|Ranjan| 36|
++------+---+
+
+>>> rdd_df1.printSchema()
+root
+ |-- Name: string (nullable = true)
+ |-- Age: integer (nullable = true)
+
+d) Using Row :
+--------------
+>>> from pyspark.sql import Row
+>>> row_df1=spark.createDataFrame(data=[Row(name='Soumya',age=25),Row(name='Ranjan',age=30)])
+>>> row_df1.show()
++------+---+
+|  name|age|
++------+---+
+|Soumya| 25|
+|Ranjan| 30|
++------+---+
+
+>>> row_df1.printSchema()
+root
+ |-- name: string (nullable = true)
+ |-- age: long (nullable = true)
+
+e)Using Python Pandas DataFrame:
+--------------------------------- 
+
+pandas dataframe is a two dimensional structure with named rows and columns . So data is aligned in a tabular fashion in rows and columns .
+
+>>> import pandas as pd
+>>> data=(('Tom',10),('Dick',20),('Harry',30))
+>>> df_pd=pd.DataFrame(data,columns=('Name','Age'))
+>>> df=spark.createDataFrame(df_pd)
+>>> df.show()
++-----+---+
+| Name|Age|
++-----+---+
+|  Tom| 10|
+| Dick| 20|
+|Harry| 30|
++-----+---+
+>>> df.printSchema()
+root
+ |-- Name: string (nullable = true)
+ |-- Age: long (nullable = true)
+ 
+#4)Sql():
+----------
+Returns a dataframe representing the result of a given query.
+
+>>> lst1=(('Soumya',36),('Ranjan',35))
+>>> lst2=(('Soumya',10),('Ranjan',20))
+>>> df_emp=spark.createDataFrame(data=lst1,schema=('Name','Age'))
+>>> df_dept=spark.createDataFrame(data=lst2,schema=('Name','DeptNo'))
+>>> df_emp.show()
++------+---+
+|  Name|Age|
++------+---+
+|Soumya| 36|
+|Ranjan| 35|
++------+---+
+
+>>> df_dept.show()
++------+------+
+|  Name|DeptNo|
++------+------+
+|Soumya|    10|
+|Ranjan|    20|
++------+------+
+
+>>> df_emp.createOrReplaceTempView('emp')
+>>> df_dept.createOrReplaceTempView('dept')
+
+>>> df_joined=spark.sql("""select e.name,e.age,d.name,d.deptno from emp e join dept d on e.name=d.name""")
+>>> df_joined.show()
++------+---+------+------+
+|  name|age|  name|deptno|
++------+---+------+------+
+|Ranjan| 35|Ranjan|    20|
+|Soumya| 36|Soumya|    10|
++------+---+------+------+
+
+>>> df_joined.printSchema()
+root
+ |-- name: string (nullable = true)
+ |-- age: long (nullable = true)
+ |-- name: string (nullable = true)
+ |-- deptno: long (nullable = true)
+
+Note: 
+df.createOrReplaceTempView('Table1'): creates the view in the current database and valid for only one session.
+df.createOrReplaceGlobalTempView('Table1'): creates the view in global_temp database . valid across all sessions of an application.
+
+#5)table():
+------------
+returns the specified table as dataframe
+
+>>> lst1
+(('Soumya', 36), ('Ranjan', 35))
+>>> df_emp.show()
++------+---+
+|  Name|Age|
++------+---+
+|Soumya| 36|
+|Ranjan| 35|
++------+---+
+
+>>> df_emp.createOrReplaceTempView('emp')
+>>> df_op=spark.table("emp")
+>>> df_op.show()
++------+---+
+|  Name|Age|
++------+---+
+|Soumya| 36|
+|Ranjan| 35|
++------+---+
+
+>>> sorted(df_op.collect())==sorted(df_emp.collect())
+True
+
+#6)conf():
+----------
+We can provide runtime configuration ,shuffle parameters ,application configurations using --conf or spark.conf().
+
+Ex1:
+System Defined
+spark.conf.get("spark.sql.session.TimeZone")
+spark.conf.get("spark.sql.shuffle.partitions")
+spark.conf.set("spark.sql.shuffle.partitions",300)
+
+Ex2. Spark runnung on YARN environment variables
+
+spark.conf.set('spark.yarn.appMasterEnv.HDFS_PATH','practice/retail_db/orders')
+
+--conf spark.yarn.appMasterEnv.HDFS_PATH #from spark-submit
+
+#7)read():
+-----------
+is used to load the dataframe from external storage System.
+
+load a csv file
+load a text file
+load a orc file
+load a Parquet file
+load a json file
+load a avro file
+read a hive table
+read a JDBC
+
+#7.1 read-csv:
+---------------
+Load a csv file
+ex1: 
+>>> df = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',schema=('order_id int,order_date string,order_customer_id int,order_status string'))
+
+>>> df.show(5,truncate=False)
++--------+---------------------+-----------------+---------------+
+|order_id|order_date           |order_customer_id|order_status   |
++--------+---------------------+-----------------+---------------+
+|1       |2013-07-25 00:00:00.0|11599            |CLOSED         |
+|2       |2013-07-25 00:00:00.0|256              |PENDING_PAYMENT|
+|3       |2013-07-25 00:00:00.0|12111            |COMPLETE       |
+|4       |2013-07-25 00:00:00.0|8827             |CLOSED         |
+|5       |2013-07-25 00:00:00.0|11318            |COMPLETE       |
++--------+---------------------+-----------------+---------------+
+only showing top 5 rows
+
+
+>>> df = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',inferSchema=True)
+>>> df1 = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',Header=True)
+
+>>> df1 = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',sep=',',ignoreLeadingWhiteSpace=True,ignoreTrailingWhiteSpace=True)
+
+#7.2 read-text:
+----------------
+Load a text file:
+-Use text file where there is a fixed length.
+-Default fieldname is "value".
+-Also you may load into rdd.
+-convert to dataframe using toDF() and Row.
+
+>>> df1 = spark.read.load(Path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='text')
+
+#7.2 read-orc/parquet:
+------------------------
+
+Load a orc file:
+    df=spark.read.load('practice/retail_db/orders_orc',format='orc')
+Load a parquet file:
+    df=spark.read.load('practice/retail_db/orders_orc',format='parquet')
+    
+    
+#7.3 read-json:
+----------------
+    df=spark.read.load('practice/retail_db/orders_json',format='json')
+    
+#7.4 read-avro:
+----------------
+Avro is a third party file format  . We need to import its package or jar file while launching a spark-submitapplication or pyspark shell . Spark by default does not support it.
+
+    pyspark --master yarn --packages org.apache.spark:spark-avro_2.11:2.4.4
+    df=spark.read.load('practice/retail_db/orders_avro',format='avro')
+    
+#7.5 read- Hive table:
+------------------------
+If Hive and Spark are integarated , we can create dataframes from data in Hive tables or run Spark SQL queries against it .
+
+spark.sql("""select * from <DB>.<table_name>""").show()
+spark.table("<DB>.<table_name>").show()
+
+#7.6 read - JDBC table:
+-------------------------
+- make sure JDBC jar file is registered using --packages or --jars while launching pyspark or spark-submit.
+- Typical JDBC files are located at /usr/share/java folder . you may keep it there or copy it to your project lib folder.
+
+C:\app\spark\product\21c\dbhomeXE\jdbc\lib\ojdbc11.jar
+
+pyspark --jars <jdbc driver jar file>
+
+Ex1: Table
+pyspark --jars C:\app\spark\product\21c\dbhomeXE\jdbc\lib\ojdbc8.jar
+
+>>> df = spark.read.format('jdbc')\
+.option("url","jdbc:oracle:thin:scott/oracle@//localhost:1521/XEPDB1")\
+.option("driver","oracle.jdbc.driver.OracleDriver")\
+.option("dbtable","emp")\
+.option("user","scott")\
+.option("password","oracle")\
+.load()
+
+df = spark.read.format('jdbc')\
+.option("url","jdbc:oracle:thin:scott/oracle@//localhost:1521/XEPDB1")\
+.option("driver","oracle.jdbc.driver.OracleDriver")\
+.option("dbtable","emp")\
+.load()
+
+Ex2: Query
+
+>>> df1 = spark.read.format('jdbc')\
+.option('url',"jdbc:oracle:thin:scott/oracle@//localhost:1521/XEPDB1")\
+.option('driver',"oracle.jdbc.driver.OracleDriver")\
+.option('dbtable','(select * from emp) query')\
+.load()
+
+Ex3: partition
+-partitioning can be done only on numeric or date fields.
+-If there is no numeric field generate it . for ex: use rownum to genearte dummy numeric fields in oracle database .
+-Define partitionColumn,lowerBound,upperBound,numPartitions(Either all or None)
+
+df1 = spark.read.format('jdbc')\
+.option('url',"jdbc:oracle:thin:scott/oracle@//localhost:1521/XEPDB1")\
+.option('driver',"oracle.jdbc.driver.OracleDriver")\
+.option('dbtable','(select t1.* , cast(rownum as number(5)) as row_num from (select * from emp) t1) table1')\
+.option('partitionColumn','row_num')\
+.option('lowerBound','1')\
+.option('upperBound','15')\
+.option('numPartitions','5')\
+.load()
+
+Note: Stride = (upperbound-lowerbound)/numPartitions
+
+>>> df1.rdd.getNumPartitions()
+5
+>>> df1.rdd.glom().collect()
+
+#8)udf():
+---------
+
+- UDFs are the user defined functions . Spark UDFs are similar to RDBMS user defined functions.
+- If there is a need of function and pyspark built-in features dont have this function, then we can a UDF and use it in DataFrame and Spark SQLs.
+- UDFs are error-prune and so should be designed carefully . First check if similar function is available in pyspark functions library(pyspark.sql.functions). If not designed properly, we would come across optimization and perfomance issues.
+-We can use UDFs both in dataframe and Spark SQL.
+    -For Spark SQL, create a python function or UDF and register it using spark.udf.register method.
+    -For Dataframe , create a udf by wrapping under @udf or udf() function.
+    
+Ex1:(Create a udf , use it in dataframe and register for Spark sql)
+---------------------------------------------------------------------
+
+import string
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType,IntegerType
+
+@udf(returnType=StringType())
+def initCap(str):
+    finalStr=""
+    ar=str.split(" ")
+    for word in ar:
+        finalStr=finalStr + word[0:1].upper() + word[1:len(word)] + " "
+    return finalStr.strip()
+
+from pyspark.sql import SparkSession
+spark= SparkSession\
+    .builder\
+    .master('local')\
+    .appName('Basic Test')\
+    .getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+print('SparkSession object is created...')
+
+lst1=(('soumya ranjan nayak',36),('truptimayee rout nayak',36))
+df=spark.createDataFrame(data=lst1,schema=('name','age'))
+df.registerTempTable("emp")
+
+#DataFrame:
+df1= df.select(df.name,initCap(df.name).alias("DFInitCap"))
+df1.show()
+
+#Spark SQL
+spark.udf.register("initCap1",initCap)
+spark.sql("""select name,initcap1(name) as SQLInitCap from emp""").show()
+
+Ex2:(Using Python Function and register in Spark SQL)
+-------------------------------------------------------
+def convertCap(str):
+    finalStr=""
+    ar=str.split(" ")
+    for word in ar:
+        finalStr=finalStr + word[0:1].upper() + word[1:len(word)] + " "
+    return finalStr.strip()
+from pyspark.sql import SparkSession
+spark= SparkSession\
+    .builder\
+    .master('local')\
+    .appName('Basic Test')\
+    .getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+print('SparkSession object is created...')
+
+lst1=(('soumya ranjan nayak',36),('truptimayee rout nayak',36))
+df=spark.createDataFrame(data=lst1,schema=('name','age'))
+df.registerTempTable("emp")
+
+#Spark SQL
+spark.udf.register("convertCap1",convertCap)
+spark.sql("""select name,convertCap1(name) as SQLInitCap from emp""").show()
+
+
+Ex3: (Using Python Lambda function and use it in Spark SQL)
+------------------------------------------------------------
+>>> from pyspark.sql.types import IntegerType
+>>> from pyspark.sql.functions import udf
+>>> slen = udf(lambda s:len(s),IntegerType())
+>>> spark.udf.register("slen",slen)
+>>> spark.sql("select slen('test')").collect()
+
+#9)newSession():
+----------------
+spark.newSession():
+
+-Returns a new SparkSession as new session, that has separate SQLConf,registered temporary views and UDFs , but shared SparkContext and table cache.
+-Ex1: The registered udfs will not be visible to new session.
+
+new_spark = spark.newSession()
+
+>>> from pyspark.sql.types import IntegerType
+>>> from pyspark.sql.functions import udf
+>>> slen = udf(lambda s:len(s),IntegerType())
+>>> spark.udf.register("slen",slen)
+>>> spark.sql("select slen('test')").collect()
+
+>>> new_spark.sql("select slen('test')").collect() ---> Will give error
+
+Ex2:(Using Table data) -> Shared SparkContext 
+spark.sql("""create table student(name int)""")
+spark.sql("""insert into student values(1)""")
+spark.sql("""select count(*) from student""").show()
+new_spark.sql("""select count(*) from student""").show()
+
+#10)stop():
+------------
+spark.stop() : To stop the underlying spark context.
+
+#11)catalog():
+---------------
+
+-catalog is introduced in spark 2.0 which is standard api for accessing metadata in Saprk SQL.
+-This works both for Spark SQL and Hive metadata.
+-Below are different methods in catalog for extracting important information.
+
+DataBase Functions:
+-------------------
+currentDatabase
+listDatabases
+setCurrentDatabase
+
+e.g:
+>>> spark.catalog.currentDatabase()
+'default'
+>>> spark.catalog.setCurrentDatabase('Test')
+>>> spark.catalog.listDatabases()
+>>> test in [i.name for i in spark.catalog.listDatabases()] 
+# to check if anydatabse exists or not
+
+Table Functions:
+----------------
+listColumns
+listTables
+cacheTable
+isCached
+uncacheTable
+clearCache
+recoverPartitions
+refreshTable
+refreshByPath
+
+e.g:
+spark.catalog.listColumns('emp','default')
+
+View functions:
+---------------
+dropGlobalTempView
+dropTempView
+
+Function based functions:
+--------------------------
+listFunctions
+registerFunction(= spark.udf.register)
+
+#28/03/2022
+----------------------------------------------------Soumya----------------------------------------------
+
+**********************************
+#Section 18: Spark DataTypes:
+**********************************
+
+Numeric types:
+--------------
+	-IntegerType()
+	-FloatType()
+	-DoubleType()
+
+String Types:
+-------------
+	-StringType()
+	-VarcharType(length)
+	-CharType(length)
+
+Boolean Types:
+--------------
+	-BooleanType()
+
+Binary Type:
+------------
+	-BinaryType()
+
+Date Types:
+-----------
+	-TimestampType()
+	-DateType()
+
+Complex Type:
+-------------
+    -ArrayType(elementType,containsNull)
+    -MapType(keyType,valueType,valueContainsNull)
+    -StructType(fields)
+
+Ex1: StructType
+---------------
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType,StructField,StringType,IntegerType,DataType
+
+spark= SparkSession.builder.master('local').appName("Test").getOrCreate()
+schema = StructType((
+    StructField("Name",StringType()),
+    StructField("Age",IntegerType())
+))
+data = (('James',1),('Robert',4),('Harry',5))
+
+df= spark.createDataFrame(data=data,schema=schema)
+df.printSchema()
+df.show()
+
+Ex2: MapType
+------------
+
+from pyspark.sql import SparkSession
+from pyspark.sq l.types import StructType,StructField,StringType,IntegerType,DateType,MapType
+
+spark= SparkSession.builder.master('local').appName("Test").getOrCreate()
+schema = StructType((
+    StructField("Name",StringType()),
+    StructField("Properties",MapType(StringType(),StringType()))
+))
+data = (('James',{'hair':' black','eye':'brown'}),('Robert',{'hair':' black','eye':None}),
+        ('Harry',{'hair':' red','eye':'black'}))
+
+df= spark.createDataFrame(data=data,schema=schema)
+df.printSchema()
+df.show()
+df.select(df.Properties).show()
+df.select(df.Properties['eye']).show()
+
+o/p:
+root
+ |-- Name: string (nullable = true)
+ |-- Properties: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
++------+--------------------+
+|  Name|          Properties|
++------+--------------------+
+| James|{eye -> brown, ha...|
+|Robert|{eye -> null, hai...|
+| Harry|{eye -> black, ha...|
++------+--------------------+
+
++--------------------+
+|          Properties|
++--------------------+
+|{eye -> brown, ha...|
+|{eye -> null, hai...|
+|{eye -> black, ha...|
++--------------------+
+
++---------------+
+|Properties[eye]|
++---------------+
+|          brown|
+|           null|
+|          black|
++---------------+
+
+Ex2: ArrayType
+--------------
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType,StructField,StringType,IntegerType,DateType,MapType,ArrayType
+
+spark= SparkSession.builder.master('local').appName("Test").getOrCreate()
+schema = StructType((
+    StructField("Name",StringType()),
+    StructField("Mobilenumbers",ArrayType(IntegerType()))
+))
+data = (('James',(123,456,789)),('Robert',(11,22,33)),
+        ('Harry',(55,66,77)))
+
+df= spark.createDataFrame(data=data,schema=schema)
+df.printSchema()
+df.show()
+df.select(df.Mobilenumbers).show()
+
+o/p:
+root
+ |-- Name: string (nullable = true)
+ |-- Mobilenumbers: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+
++------+---------------+
+|  Name|  Mobilenumbers|
++------+---------------+
+| James|[123, 456, 789]|
+|Robert|   [11, 22, 33]|
+| Harry|   [55, 66, 77]|
++------+---------------+
+
++---------------+
+|  Mobilenumbers|
++---------------+
+|[123, 456, 789]|
+|   [11, 22, 33]|
+|   [55, 66, 77]|
++---------------+
+
+Note:
+-------
+Aliases used in Spark sql
+
+For Ex: 
+IntegerType -> int , integer
+StringType -> string
+BooleanType -> boolean
+
+Special Values:
+---------------
+- None(Null)
+- inf , -inf (FloatType or DoubleType infinity)
+- NaN (FloatType or DoubleType Not a Number)
+
+Nan = NaN returns True
+
+In Aggregations all NaN values are grouped together.
+
+*********************************
+#Section 19: DataFrame Rows:
+*********************************
+
+Dataframe is a dataset organised into named columns/Rows
+
+Row:
+----
+-Represented as a record/row in dataframe.
+-We can create a Row object by using named arguments, or create a custom Row like class.
+-Available in pyspark.sql.Row
+
+#1.Row Object
+---------------
+>>> from pyspark.sql import Row
+>>> row=Row(name="Ranjan", Age="30")
+>>> row.name
+'Ranjan'
+>>> lst=[Row(name="Ranjan", Age="30"),Row(name="Nayak", Age="31"),Row(name="Ranjan1", Age="30")]
+>>> rdd=sc.parallelize(lst)
+>>> for i in rdd.collect(): print(str(i.name)+ '  '+str(i.Age))
+...
+Ranjan  30
+Nayak  31
+Ranjan1  30
+>>> df = spark.createDataFrame(lst)
+>>> df.show()
++-------+---+
+|   name|Age|
++-------+---+
+| Ranjan| 30|
+|  Nayak| 31|
+|Ranjan1| 30|
++-------+---+
+
+#2.Custom class from Row:
+------------------------------
+>>> Person = Row("Name","Age")
+>>> p1=Person("Soumya",30)
+>>> p2=Person("Ranjan",31)
+>>> print(p1.Name)
+Soumya
+>>> lst=[Person("Ranjan","30"),Person("Nayak", "31"),Person("Ranjan1","30")]
+>>> rdd=sc.parallelize(lst)
+>>> for i in rdd.collect(): print(str(i.Name)+ '  '+str(i.Age))
+...
+Ranjan  30
+Nayak  31
+Ranjan1  30
+>>> df = spark.createDataFrame(lst)
+>>> df.show()
++-------+---+
+|   Name|Age|
++-------+---+
+| Ranjan| 30|
+|  Nayak| 31|
+|Ranjan1| 30|
++-------+---+
+
+Row Methods:
+-------------
+count(): returns the number of occurences of the value
+------
+>>> person = Row(name="ranjan" , age= 30 , username="ranjan")
+>>> person.count("ranjan")
+2
+index(): return first index of value
+-------
+>>> person.index(30)
+1
+asDict(): return as dict
+---------
+>>> person.asDict()
+{'name': 'ranjan', 'age': 30, 'username': 'ranjan'}
+
+*************************************
+#Section 20: DataFrame Columns:
+*************************************
+
+>>> df = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',schema=('order_id int,order_date string,order_customer_id int,order_status string'))
+>>> df.printSchema()
+root
+ |-- order_id: integer (nullable = true)
+ |-- order_date: string (nullable = true)
+ |-- order_customer_id: integer (nullable = true)
+ |-- order_status: string (nullable = true)
+
+#1) Select a column:
+------------------------
+>>> df.select(df.order_id).show()
+>>> df.select(df["order_id"]).show()
+
+>>> df.select("*").show() #to select all columns
+
+#2) Give a alias name to a column:
+----------------------------------------
+alias()
+Ex: 
+
+
+*************************************************
+#Section 21: DataFrame ETL(Transformations):
+*************************************************
+
+Dataframe Transformations:
+--------------------------
+Dataframe APIs:
+---------------
+-selection
+-filter
+-sort
+-set
+-join
+-aggregations
+-groupBy
+-window
+-sample
+
+DataFrame Built-in Functions:
+-----------------------------
+-New Column
+-Encryption
+-String
+-RegExp
+-Date
+-Null
+-Collection
+-Na
+-Math & Statistics
+-Explode & Flatten
+-Formatting
+-json
+-other
+
+#Dataframe APIs:selection APIs
+**********************************
+
+#prepare data
+
+>>> data=(('Robert',35,40,40),('Robert',35,40,40),('Ram',31,33,29),('Ram',31,33,91))
+>>> emp=spark.createDataFrame(data=data,schema=('name','score1','score2','score3'))
+>>> emp.show()
++------+------+------+------+
+|  name|score1|score2|score3|
++------+------+------+------+
+|Robert|    35|    40|    40|
+|Robert|    35|    40|    40|
+|   Ram|    31|    33|    29|
+|   Ram|    31|    33|    91|
++------+------+------+------+
+
+>>> ord = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',sep=',',schema=('order_id int,order_date string,order_customer_id int,order_status string'))
+>>> ord.show(5,truncate=False)
++--------+---------------------+-----------------+---------------+
+|order_id|order_date           |order_customer_id|order_status   |
++--------+---------------------+-----------------+---------------+
+|1       |2013-07-25 00:00:00.0|11599            |CLOSED         |
+|2       |2013-07-25 00:00:00.0|256              |PENDING_PAYMENT|
+|3       |2013-07-25 00:00:00.0|12111            |COMPLETE       |
+|4       |2013-07-25 00:00:00.0|8827             |CLOSED         |
+|5       |2013-07-25 00:00:00.0|11318            |COMPLETE       |
++--------+---------------------+-----------------+---------------+
+only showing top 5 rows
+
+#select(*cols)
+---------------
+-select one or more columns
+>>> ord.select(ord.order_id,'order_id',"order_id",(ord.order_id + 10).alias('order10')).show(5)
++--------+--------+--------+-------+
+|order_id|order_id|order_id|order10|
++--------+--------+--------+-------+
+|       1|       1|       1|     11|
+|       2|       2|       2|     12|
+|       3|       3|       3|     13|
+|       4|       4|       4|     14|
+|       5|       5|       5|     15|
++--------+--------+--------+-------+
+only showing top 5 rows
+
+-can apply necesssary functions on the selected columns.
+
+>>> from pyspark.sql.functions import lower
+>>> ord.select(ord.order_status,lower(ord.order_status)).show(5)
++---------------+-------------------+
+|   order_status|lower(order_status)|
++---------------+-------------------+
+|         CLOSED|             closed|
+|PENDING_PAYMENT|    pending_payment|
+|       COMPLETE|           complete|
+|         CLOSED|             closed|
+|       COMPLETE|           complete|
++---------------+-------------------+
+only showing top 5 rows
+
+#selectExpr(*expr):
+---------------------
+-This is a variant of select that accepts SQL expressions.
+
+>>> from pyspark.sql.functions import substring
+>>> ord.select(substring(ord.order_date,1,4).alias('order_year')).show(5)
++----------+
+|order_year|
++----------+
+|      2013|
+|      2013|
+|      2013|
+|      2013|
+|      2013|
++----------+
+only showing top 5 rows
+
+>>> ord.selectExpr("substring(order_date,1,4) as order_year").show(5)
++----------+
+|order_year|
++----------+
+|      2013|
+|      2013|
+|      2013|
+|      2013|
+|      2013|
++----------+
+only showing top 5 rows
+
+-if we want to use any functions available in SQL but not available in spark built in functions, then we can use selectExpr.
+Note: stack function not available in spark,but it is available in sql.
+
+>> df=spark.range(1)
+>>> df.show()
++---+
+| id|
++---+
+|  0|
++---+
+
+>>> df.selectExpr("stack(3,1,2,3,4,5,6)").show()
++----+----+
+|col0|col1|
++----+----+
+|   1|   2|
+|   3|   4|
+|   5|   6|
++----+----+
+
+#withColumn(colName,col):
+---------------------------
+-Applied transformation to only selected columns.
+-The first argument is a alias name. if we give alias name same as a column name, the transformations will apply on the same column.
+-Otherwise a new column will be formed. Avoid giving alias name same as column name.
+
+>>> ord.withColumn('order_month',substring(ord.order_date,1,10)).show(5,truncate=False)
++--------+---------------------+-----------------+---------------+-----------+
+|order_id|order_date           |order_customer_id|order_status   |order_month|
++--------+---------------------+-----------------+---------------+-----------+
+|1       |2013-07-25 00:00:00.0|11599            |CLOSED         |2013-07-25 |
+|2       |2013-07-25 00:00:00.0|256              |PENDING_PAYMENT|2013-07-25 |
+|3       |2013-07-25 00:00:00.0|12111            |COMPLETE       |2013-07-25 |
+|4       |2013-07-25 00:00:00.0|8827             |CLOSED         |2013-07-25 |
+|5       |2013-07-25 00:00:00.0|11318            |COMPLETE       |2013-07-25 |
++--------+---------------------+-----------------+---------------+-----------+
+only showing top 5 rows
+
+
+#withColumnRenamed(existingCol,newCol):
+------------------------------------------
+-Rename existing column
+
+>>> ord.withColumnRenamed('order_id','order_id1').show(5,truncate=False)
++---------+---------------------+-----------------+---------------+
+|order_id1|order_date           |order_customer_id|order_status   |
++---------+---------------------+-----------------+---------------+
+|1        |2013-07-25 00:00:00.0|11599            |CLOSED         |
+|2        |2013-07-25 00:00:00.0|256              |PENDING_PAYMENT|
+|3        |2013-07-25 00:00:00.0|12111            |COMPLETE       |
+|4        |2013-07-25 00:00:00.0|8827             |CLOSED         |
+|5        |2013-07-25 00:00:00.0|11318            |COMPLETE       |
++---------+---------------------+-----------------+---------------+
+only showing top 5 rows
+
+#drop(*col):
+-------------
+-Drop a column
+
+>> ord_new=ord.drop('order_id','order_date')
+>>> ord_new.show(5)
++-----------------+---------------+
+|order_customer_id|   order_status|
++-----------------+---------------+
+|            11599|         CLOSED|
+|              256|PENDING_PAYMENT|
+|            12111|       COMPLETE|
+|             8827|         CLOSED|
+|            11318|       COMPLETE|
++-----------------+---------------+
+only showing top 5 rows
+
+#dropDuplicates:
+------------------
+-drop duplicate rows
+-optionally can consider only subset of columns.
+
+>>> emp.show()
++------+------+------+------+
+|  name|score1|score2|score3|
++------+------+------+------+
+|Robert|    35|    40|    40|
+|Robert|    35|    40|    40|
+|   Ram|    31|    33|    29|
+|   Ram|    31|    33|    91|
++------+------+------+------+
+
+>>> emp.dropDuplicates().show()
++------+------+------+------+
+|  name|score1|score2|score3|
++------+------+------+------+
+|Robert|    35|    40|    40|
+|   Ram|    31|    33|    29|
+|   Ram|    31|    33|    91|
++------+------+------+------+
+
+>>> emp.dropDuplicates(("name","score1","score2")).show()
++------+------+------+------+
+|  name|score1|score2|score3|
++------+------+------+------+
+|Robert|    35|    40|    40|
+|   Ram|    31|    33|    29|
++------+------+------+------+
+
+#Dataframe APIs:filter APIs
+******************************
+#prepare data
+
+>>> ord = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',sep=',',schema=('order_id int,order_date string,order_customer_id int,order_status string'))
+>>> ord.show(5,truncate=False)
++--------+---------------------+-----------------+---------------+
+|order_id|order_date           |order_customer_id|order_status   |
++--------+---------------------+-----------------+---------------+
+|1       |2013-07-25 00:00:00.0|11599            |CLOSED         |
+|2       |2013-07-25 00:00:00.0|256              |PENDING_PAYMENT|
+|3       |2013-07-25 00:00:00.0|12111            |COMPLETE       |
+|4       |2013-07-25 00:00:00.0|8827             |CLOSED         |
+|5       |2013-07-25 00:00:00.0|11318            |COMPLETE       |
++--------+---------------------+-----------------+---------------+
+only showing top 5 rows
+
+#filter(condition):(its alias 'where')
+------------------------------------------
+-filter rows using a given condition
+-use '&' for 'and' . '|' for 'or'.(boolean expressions) 
+-use column function isin() for multiple search.
+-Or use IN operator for SQL style syntax.
+
+ord.where((ord.order_id>10) & (ord.order_id <20)).show()
+
+>>> ord.where(ord.order_status.isin('CLOSED','COMPLETE')).show(5,truncate=False)
++--------+---------------------+-----------------+------------+
+|order_id|order_date           |order_customer_id|order_status|
++--------+---------------------+-----------------+------------+
+|1       |2013-07-25 00:00:00.0|11599            |CLOSED      |
+|3       |2013-07-25 00:00:00.0|12111            |COMPLETE    |
+|4       |2013-07-25 00:00:00.0|8827             |CLOSED      |
+|5       |2013-07-25 00:00:00.0|11318            |COMPLETE    |
+|6       |2013-07-25 00:00:00.0|7130             |COMPLETE    |
++--------+---------------------+-----------------+------------+
+
+>>> ord.where("order_status in ('CLOSED','COMPLETE')").show(5,truncate=False)
+
+
+#Dataframe APIs:Sort APIs
+****************************
+#prepare data
+>>> ord = spark.read.load(path='C:\Soumya\Spark_Test_Data\PracticeFiles\Orders\part-00000',format='csv',sep=',',schema=('order_id int,order_date string,order_customer_id int,order_status string'))
+data=(('a',1),('d',4),('c',3),('e',5))
+df=spark.createDataFrame(data=data,schema='col1 string,col2 int')
+
+#sort() or orderBy():
+-----------------------
+-sort specific columns(s)
+
+>>> ord.sort(ord.order_date.desc(),ord.order_status.asc()).show(5,truncate=False)
++--------+---------------------+-----------------+------------+
+|order_id|order_date           |order_customer_id|order_status|
++--------+---------------------+-----------------+------------+
+|57672   |2014-07-24 00:00:00.0|10855            |CANCELED    |
+|57638   |2014-07-24 00:00:00.0|8905             |CANCELED    |
+|57654   |2014-07-24 00:00:00.0|2980             |CLOSED      |
+|57631   |2014-07-24 00:00:00.0|3728             |CLOSED      |
+|57607   |2014-07-24 00:00:00.0|2666             |CLOSED      |
++--------+---------------------+-----------------+------------+
+
+>>> ord.sort(ord.order_date,ord.order_status,ascending=[0,1]).show(5,truncate=False) #1- Ascending ,0-Descending
++--------+---------------------+-----------------+------------+
+|order_id|order_date           |order_customer_id|order_status|
++--------+---------------------+-----------------+------------+
+|57672   |2014-07-24 00:00:00.0|10855            |CANCELED    |
+|57638   |2014-07-24 00:00:00.0|8905             |CANCELED    |
+|57654   |2014-07-24 00:00:00.0|2980             |CLOSED      |
+|57631   |2014-07-24 00:00:00.0|3728             |CLOSED      |
+|57607   |2014-07-24 00:00:00.0|2666             |CLOSED      |
++--------+---------------------+-----------------+------------+
+only showing top 5 rows
+
+#sortWithinPartitions:
+-------------------------
+-At time we may not want sort gloablly ,but within a group. In that case we can use sortWithinPartitions.
+
+df.sortWithinPartitions(df.col1.asc(),df.col2.asc()).show()
+>>> df.rdd.getNumPartitions()
+4
+>>> df=df.repartition(2)
+>>> df.rdd.glom().collect()
+[[Row(col1='a', col2=1), Row(col1='d', col2=4), Row(col1='c', col2=3), Row(col1='e', col2=5)], []]
+
+>>> df.sortWithinPartitions(df.col1.asc(),df.col2.asc()).show()
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
+|   c|   3|
+|   d|   4|
+|   e|   5|
++----+----+
+
+#Dataframe APIs:Set APIs
+***************************
+#union() and unionAll():
+-> same and contains duplicate values.
+-> use distinct after union or unionAll to remove duplicates.
+
+#unionByName():
+->The differnce between this function and union is that this function resolves columns by name(not by position)
+
+>>> df1=spark.createDataFrame(data=[('a',1),('b',2)],schema=('col1 string,col2 int'))
+>>> df2=spark.createDataFrame(data=[(2,'b'),(1,'a')],schema=('col2 int,col1 string'))
+>>> df1.union(df2).show()
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
+|   b|   2|
+|   2|   b|
+|   1|   a|
++----+----+
+
+>>> df1.unionByName(df2).show()
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
+|   b|   2|
+|   b|   2|
+|   a|   1|
++----+----+
+
+#intersect(): 
+-> common rows in both dataframe . Removed duplicates.
+#intersectAll():
+->same as intersect . But retains the duplicates.
+
+>>> df1=spark.createDataFrame(data=[('a',1),('a',1),('b',2)],schema=('col1 string,col2 int'))
+>>> df2=spark.createDataFrame(data=[('a',1),('a',1),('c',2)],schema=('col1 string,col2 int'))
+>>> df1.intersect(df2).show()
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
++----+----+
+
+>>> df1.intersectAll(df2).show()
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
+|   a|   1|
++----+----+
+
+#exceptAll():
+
+->Rows present in one dataframe but not in other.
+>>> df1.exceptAll(df2).show()
++----+----+
+|col1|col2|
++----+----+
+|   b|   2|
++----+----+
+
+
+#Dataframe APIs:Join
+**********************
+
+#join(otherdf,on=None,how=None)
+
+->on: joining column
+->how: inner ,outer , cross , .....
+
+Note: Semi joins performs better than inner joins , use them wherever possible.
+
+>>> df1= spark.createDataFrame(data=[(1,'Robert'),(2,'Ria'),(3,'James')],schema='empid int,ename string')
+>>> df2= spark.createDataFrame(data=[(2,'USA'),(4,'India')],schema='empid int,country string')
+>>> df1.show()
++-----+------+
+|empid| ename|
++-----+------+
+|    1|Robert|
+|    2|   Ria|
+|    3| James|
++-----+------+
+
+>>> df2.show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    2|    USA|
+|    4|  India|
++-----+-------+
+
+>>> df1.join(df2,df1.empid==df2.empid,'inner').select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    2|    USA|
++-----+-------+
+
+>>> df1.join(df2,df1.empid==df2.empid,'left').select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    1|   null|
+|    2|    USA|
+|    3|   null|
++-----+-------+
+
+>>> df1.join(df2,df1.empid==df2.empid,'right').select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    2|    USA|
+| null|  India|
++-----+-------+
+
+>>> df1.join(df2,df1.empid==df2.empid,'full').select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    1|   null|
+|    2|    USA|
+|    3|   null|
+| null|  India|
++-----+-------+
+
+
+>>> df1.join(df2,df1.empid==df2.empid,'leftanti').select(df1.empid,df1.ename).show()
++-----+------+
+|empid| ename|
++-----+------+
+|    1|Robert|
+|    3| James|
++-----+------+
+
+>>> df1.join(df2,df1.empid==df2.empid,'leftsemi').select(df1.empid,df1.ename).show()
++-----+-----+
+|empid|ename|
++-----+-----+
+|    2|  Ria|
++-----+-----+
+
+Note: for leftanti and leftsemi , Only df1 data can be selected. Its like exist/not exist in df2.
+
+>>> df1.join(df2).select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    1|    USA|
+|    1|  India|
+|    2|    USA|
+|    2|  India|
+|    3|    USA|
+|    3|  India|
++-----+-------+
+
+>>> df1.join(df2,how='cross').select(df1.empid,df2.country).show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    1|    USA|
+|    1|  India|
+|    2|    USA|
+|    2|  India|
+|    3|    USA|
+|    3|  India|
++-----+-------+
+
+#self join:
+
+use of col():
+-------------
+Sometimes we need use the column name which is the alias of a withColumn . In that case we need to refer the column name as col(column_name).
+
+from pyspark.sql.functions import col
+
+>>> df1= spark.createDataFrame(data=[(1,'Robert',2),(2,'Ria',3),(3,'James',5)],schema='empid int,ename string,managerid int')
+>>> df1.show()
++-----+------+---------+
+|empid| ename|managerid|
++-----+------+---------+
+|    1|Robert|        2|
+|    2|   Ria|        3|
+|    3| James|        5|
++-----+------+---------+
+
+>>> df1.alias('emp').join(df1.alias('mgr'),col('emp.managerid')==col('mgr.empid')).select(col('emp.empid'),col('emp.ename'),col('mgr.empid').alias('mgr_id'),col('mgr.ename').alias('mgrname')).show()
++-----+------+------+-------+
+|empid| ename|mgr_id|mgrname|
++-----+------+------+-------+
+|    1|Robert|     2|    Ria|
+|    2|   Ria|     3|  James|
++-----+------+------+-------+
+
+>>> df1.alias('emp').join(df1.alias('mgr'),col('emp.managerid')==col('mgr.empid'),how='LEFT').select(col('emp.empid'),col('emp.ename'),col('mgr.empid').alias('mgr_id'),col('mgr.ename').alias('mgrname')).show()
++-----+------+------+-------+
+|empid| ename|mgr_id|mgrname|
++-----+------+------+-------+
+|    1|Robert|     2|    Ria|
+|    2|   Ria|     3|  James|
+|    3| James|  null|   null|
++-----+------+------+-------+
+
+
+#Multi column Join:
+>>> df1= spark.createDataFrame(data=[(1,101,'Robert'),(2,102,'Ria'),(3,103,'James')],schema='empid int,deptid int,ename string')
+>>> df1.show()
++-----+------+------+
+|empid|deptid| ename|
++-----+------+------+
+|    1|   101|Robert|
+|    2|   102|   Ria|
+|    3|   103| James|
++-----+------+------+
+
+>>> df2= spark.createDataFrame(data=[(2,102,'USA'),(4,104,'India')],schema='empid int,deptid int,country string')
+>>> df2.show()
++-----+------+-------+
+|empid|deptid|country|
++-----+------+-------+
+|    2|   102|    USA|
+|    4|   104|  India|
++-----+------+-------+
+
+>>> df1.join(df2,(df1.empid==df2.empid) & (df1.deptid==df2.deptid)).show()
++-----+------+-----+-----+------+-------+
+|empid|deptid|ename|empid|deptid|country|
++-----+------+-----+-----+------+-------+
+|    2|   102|  Ria|    2|   102|    USA|
++-----+------+-----+-----+------+-------+
+
+#Multi Dataframe Join:
+>>> df1= spark.createDataFrame(data=[(1,'Robert'),(2,'Ria'),(3,'James')],schema='empid int,ename string')
+>>> df1.show()
++-----+------+
+|empid| ename|
++-----+------+
+|    1|Robert|
+|    2|   Ria|
+|    3| James|
++-----+------+
+
+>>> df2= spark.createDataFrame(data=[(2,'USA'),(4,'India')],schema='empid int,country string')
+>>> df2.show()
++-----+-------+
+|empid|country|
++-----+-------+
+|    2|    USA|
+|    4|  India|
++-----+-------+
+>>> df3= spark.createDataFrame(data=[(1,'01-jan-2021'),(2,'01-feb-2021'),(3,'01-mar-2021')],schema='empid int,joindate string')
+>>> df3.show()
++-----+-----------+
+|empid|   joindate|
++-----+-----------+
+|    1|01-jan-2021|
+|    2|01-feb-2021|
+|    3|01-mar-2021|
++-----+-----------+
+
+>>> df1.join(df2,df1.empid==df2.empid).join(df3,df1.empid==df3.empid).show()
++-----+-----+-----+-------+-----+-----------+
+|empid|ename|empid|country|empid|   joindate|
++-----+-----+-----+-------+-----+-----------+
+|    2|  Ria|    2|    USA|    2|01-feb-2021|
++-----+-----+-----+-------+-----+-----------+
+
+#Dataframe APIs:Aggreagation
+*******************************
+
+>>> orderItems=spark.read.load("C:\Soumya\Spark_Test_Data\PracticeFiles\Order_items\part-00000",format='csv',schema='order_item_id int,order_item_order_id int,order_item_product_id int,quantity int ,subtotal double,price double')
+
+>>> orderItems.show(5)
++-------------+-------------------+---------------------+--------+--------+------+
+|order_item_id|order_item_order_id|order_item_product_id|quantity|subtotal| price|
++-------------+-------------------+---------------------+--------+--------+------+
+|            1|                  1|                  957|       1|  299.98|299.98|
+|            2|                  2|                 1073|       1|  199.99|199.99|
+|            3|                  2|                  502|       5|   250.0|  50.0|
+|            4|                  2|                  403|       1|  129.99|129.99|
+|            5|                  4|                  897|       2|   49.98| 24.99|
++-------------+-------------------+---------------------+--------+--------+------+
+only showing top 5 rows
+
+#summary:
+
+>>> orderItems.summary().show()
++-------+-----------------+-------------------+---------------------+------------------+------------------+-----------------+
+|summary|    order_item_id|order_item_order_id|order_item_product_id|          quantity|          subtotal|            price|
++-------+-----------------+-------------------+---------------------+------------------+------------------+-----------------+
+|  count|           172198|             172198|               172198|            172198|            172198|           172198|
+|   mean|          86099.5|  34442.56682423721|    660.4877176273824|2.1821275508426345|199.32066533874877|133.7590662494616|
+| stddev|49709.42516431533| 19883.325171992343|     310.514472790008|1.4663523175387134|112.74303721400686|118.5589325726674|
+|    min|                1|                  1|                   19|                 1|              9.99|             9.99|
+|    25%|            43033|              17204|                  403|                 1|            119.98|             50.0|
+|    50%|            86085|              34464|                  627|                 1|            199.92|            59.99|
+|    75%|           129134|              51682|                 1004|                 3|            299.95|           199.99|
+|    max|           172198|              68883|                 1073|                 5|           1999.99|          1999.99|
++-------+-----------------+-------------------+---------------------+------------------+------------------+-----------------+
+
+
+>>> orderItems.select(orderItems.price).summary().show()
++-------+-----------------+
+|summary|            price|
++-------+-----------------+
+|  count|           172198|
+|   mean|133.7590662494616|
+| stddev|118.5589325726674|
+|    min|             9.99|
+|    25%|             50.0|
+|    50%|            59.99|
+|    75%|           199.99|
+|    max|          1999.99|
++-------+-----------------+
+
+>>> orderItems.select(orderItems.price).summary("count","min","25%","75%","max").show()
++-------+-------+
+|summary|  price|
++-------+-------+
+|  count| 172198|
+|    min|   9.99|
+|    25%|   50.0|
+|    75%| 199.99|
+|    max|1999.99|
++-------+-------+
+
+#avg,max,min:
+>>> orderItems.select(round(avg(orderItems.price),2).alias('max_price'),max(orderItems.price),min(orderItems.price)).show()
++---------+----------+----------+
+|max_price|max(price)|min(price)|
++---------+----------+----------+
+|   133.76|   1999.99|      9.99|
++---------+----------+----------+
+
+#sum,sumDistinct,sum_distinct
+
+sumDistinct-> Deprecated in 3.2, use sum_distinct instead
+
+>>> orderItems.select(sum(orderItems.price),sumDistinct(orderItems.price),sum_distinct(orderItems.price)).show()
++--------------------+-------------------+-------------------+
+|          sum(price)|sum(DISTINCT price)|sum(DISTINCT price)|
++--------------------+-------------------+-------------------+
+|2.3033043690000743E7|  9832.419999999993|  9832.419999999993|
++--------------------+-------------------+-------------------+
+
+#count,countDistinct
+
+>>> orderItems.select(count(orderItems.price),countDistinct(orderItems.price),count_distinct(orderItems.price)).show()
++------------+---------------------+---------------------+
+|count(price)|count(DISTINCT price)|count(DISTINCT price)|
++------------+---------------------+---------------------+
+|      172198|                   57|                   57|
++------------+---------------------+---------------------+
+
+#first,last
+
+
+
+#Section 22: DataFrame ETL(Extractions):
+***********************************************
+
+#Section 23: Performance and Optimization:
+**************************************************
+
+
